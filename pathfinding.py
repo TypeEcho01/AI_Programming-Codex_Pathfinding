@@ -37,17 +37,68 @@ def parse_grid(text: str) -> Tuple[Grid, Pos, Pos]:
     'S' start (exactly one)
     'G' goal (exactly one)
     """
-    raise NotImplementedError
+    lines = [line for line in text.splitlines() if line]
+    if not lines:
+        raise ValueError("Grid text is empty")
+
+    width = len(lines[0])
+    if any(len(line) != width for line in lines):
+        raise ValueError("Grid must be rectangular")
+
+    grid: Grid = []
+    start: Optional[Pos] = None
+    goal: Optional[Pos] = None
+
+    valid = {"#", ".", "S", "G"}
+    for r, line in enumerate(lines):
+        row: List[str] = []
+        for c, ch in enumerate(line):
+            if ch not in valid:
+                raise ValueError(f"Invalid grid character: {ch!r}")
+            if ch == "S":
+                if start is not None:
+                    raise ValueError("Grid must contain exactly one start 'S'")
+                start = (r, c)
+            elif ch == "G":
+                if goal is not None:
+                    raise ValueError("Grid must contain exactly one goal 'G'")
+                goal = (r, c)
+            row.append(ch)
+        grid.append(row)
+
+    if start is None or goal is None:
+        raise ValueError("Grid must contain exactly one 'S' and one 'G'")
+
+    return grid, start, goal
 
 
 def neighbors(grid: Grid, node: Pos) -> List[Pos]:
     """Return valid 4-direction neighbors that are not walls."""
-    raise NotImplementedError
+    r, c = node
+    h = len(grid)
+    w = len(grid[0])
+    out: List[Pos] = []
+    for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        nr, nc = r + dr, c + dc
+        if 0 <= nr < h and 0 <= nc < w and grid[nr][nc] != "#":
+            out.append((nr, nc))
+    return out
 
 
 def reconstruct_path(parent: Dict[Pos, Pos], start: Pos, goal: Pos) -> Optional[List[Pos]]:
     """Reconstruct path from start->goal using parent pointers. Return None if goal unreachable."""
-    raise NotImplementedError
+    if start == goal:
+        return [start]
+    if goal not in parent:
+        return None
+
+    path = [goal]
+    cur = goal
+    while cur != start:
+        cur = parent[cur]
+        path.append(cur)
+    path.reverse()
+    return path
 
 
 def bfs_path(grid: Grid, start: Pos, goal: Pos) -> Tuple[Optional[List[Pos]], Set[Pos]]:
@@ -57,7 +108,23 @@ def bfs_path(grid: Grid, start: Pos, goal: Pos) -> Tuple[Optional[List[Pos]], Se
     - path is a list of positions from start to goal (inclusive), or None.
     - visited contains all explored/seen nodes.
     """
-    raise NotImplementedError
+    q: deque[Pos] = deque([start])
+    visited: Set[Pos] = {start}
+    parent: Dict[Pos, Pos] = {}
+
+    while q:
+        cur = q.popleft()
+        if cur == goal:
+            return reconstruct_path(parent, start, goal), visited
+
+        for nxt in neighbors(grid, cur):
+            if nxt in visited:
+                continue
+            visited.add(nxt)  # mark when enqueued
+            parent[nxt] = cur
+            q.append(nxt)
+
+    return None, visited
 
 
 def dfs_path(grid: Grid, start: Pos, goal: Pos) -> Tuple[Optional[List[Pos]], Set[Pos]]:
@@ -65,7 +132,23 @@ def dfs_path(grid: Grid, start: Pos, goal: Pos) -> Tuple[Optional[List[Pos]], Se
     Stack-based DFS (iterative, no recursion).
     Return (path, visited).
     """
-    raise NotImplementedError
+    stack: List[Pos] = [start]
+    visited: Set[Pos] = {start}
+    parent: Dict[Pos, Pos] = {}
+
+    while stack:
+        cur = stack.pop()
+        if cur == goal:
+            return reconstruct_path(parent, start, goal), visited
+
+        for nxt in reversed(neighbors(grid, cur)):
+            if nxt in visited:
+                continue
+            visited.add(nxt)  # mark when pushed
+            parent[nxt] = cur
+            stack.append(nxt)
+
+    return None, visited
 
 
 def render(grid: Grid, path: Optional[List[Pos]] = None, visited: Optional[Set[Pos]] = None) -> str:
@@ -76,7 +159,24 @@ def render(grid: Grid, path: Optional[List[Pos]] = None, visited: Optional[Set[P
     - visited tiles shown as '·' (middle dot) or '+'
     - preserve 'S' and 'G'
     """
-    raise NotImplementedError
+    path_set = set(path or [])
+    visited_set = visited or set()
+
+    out_rows: List[str] = []
+    for r, row in enumerate(grid):
+        chars: List[str] = []
+        for c, ch in enumerate(row):
+            pos = (r, c)
+            if ch in {"S", "G"}:
+                chars.append(ch)
+            elif pos in path_set:
+                chars.append("*")
+            elif pos in visited_set and ch == ".":
+                chars.append("·")
+            else:
+                chars.append(ch)
+        out_rows.append("".join(chars))
+    return "\n".join(out_rows)
 
 
 def run_one(label: str, grid_text: str) -> None:

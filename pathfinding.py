@@ -9,9 +9,9 @@ Grid = List[List[str]]
 
 EXAMPLE_MAP_1 = """
 ##########
-#S....#.##
-#..##..#.#
-#...##..G#
+#S.......#
+#..##.##.#
+#...#...G#
 ##########
 """.strip("\n")
 
@@ -24,6 +24,18 @@ EXAMPLE_MAP_2 = """
 #..........#
 ############
 """.strip("\n")
+
+GAME_MAP = """
+############
+#P....#....#
+#.#.#.#.##.#
+#.#.#...#..#
+#...###.#M.#
+#....#....G#
+############
+""".strip("\n")
+
+MODE = "BFS"  # or "DFS"
 
 
 def parse_grid(text: str) -> Tuple[Grid, Pos, Pos]:
@@ -178,6 +190,102 @@ def render(grid: Grid, path: Optional[List[Pos]] = None, visited: Optional[Set[P
     return "\n".join(out_rows)
 
 
+def parse_game_map(text: str) -> Tuple[Grid, Pos, Pos, Pos]:
+    lines = [line for line in text.splitlines() if line]
+    grid = [list(line) for line in lines]
+
+    player: Optional[Pos] = None
+    monster: Optional[Pos] = None
+    goal: Optional[Pos] = None
+
+    for r, row in enumerate(grid):
+        for c, ch in enumerate(row):
+            if ch == "P":
+                player = (r, c)
+                grid[r][c] = "."
+            elif ch == "M":
+                monster = (r, c)
+                grid[r][c] = "."
+            elif ch == "G":
+                goal = (r, c)
+
+    if player is None or monster is None or goal is None:
+        raise ValueError("Game map must contain P, M, and G")
+
+    return grid, player, monster, goal
+
+
+def render_game(grid: Grid, player: Pos, monster: Pos, goal: Pos) -> str:
+    out = [row[:] for row in grid]
+    gr, gc = goal
+    out[gr][gc] = "G"
+    pr, pc = player
+    mr, mc = monster
+    out[pr][pc] = "P"
+    out[mr][mc] = "M"
+    return "\n".join("".join(row) for row in out)
+
+
+def run_monster_game() -> None:
+    grid, player, monster, goal = parse_game_map(GAME_MAP)
+
+    print("=" * 60)
+    print(f"Monster Chase (MODE={MODE})")
+    print("Use WASD to move, q to quit.")
+
+    moves = {
+        "w": (-1, 0),
+        "a": (0, -1),
+        "s": (1, 0),
+        "d": (0, 1),
+    }
+
+    while True:
+        print("\n" + render_game(grid, player, monster, goal))
+
+        if player == monster:
+            print("You were caught by the monster. You lose.")
+            return
+        if player == goal:
+            print("You reached the exit. You win!")
+            return
+
+        command = input("Move (WASD, q to quit): ").strip().lower()
+        if command == "q":
+            print("Game ended.")
+            return
+        if command not in moves:
+            print("Invalid move. Use W, A, S, or D.")
+            continue
+
+        dr, dc = moves[command]
+        nr, nc = player[0] + dr, player[1] + dc
+        if grid[nr][nc] != "#":
+            player = (nr, nc)
+        else:
+            print("You bumped into a wall.")
+
+        if player == monster:
+            print("The monster got you. You lose.")
+            return
+        if player == goal:
+            print("You reached the exit. You win!")
+            return
+
+        if MODE.upper() == "DFS":
+            path, _ = dfs_path(grid, monster, player)
+        else:
+            path, _ = bfs_path(grid, monster, player)
+
+        if path and len(path) > 1:
+            monster = path[1]
+
+        if player == monster:
+            print("The monster got you. You lose.")
+            print(render_game(grid, player, monster, goal))
+            return
+
+
 def run_one(label: str, grid_text: str) -> None:
     grid, start, goal = parse_grid(grid_text)
 
@@ -198,8 +306,16 @@ def run_one(label: str, grid_text: str) -> None:
 
 
 def main() -> None:
-    run_one("Example Map 1", EXAMPLE_MAP_1)
-    run_one("Example Map 2", EXAMPLE_MAP_2)
+    print("Choose mode:")
+    print("1) Pathfinding demos")
+    print("2) Monster Chase game")
+    choice = input("Enter 1 or 2: ").strip()
+
+    if choice == "2":
+        run_monster_game()
+    else:
+        run_one("Example Map 1", EXAMPLE_MAP_1)
+        run_one("Example Map 2", EXAMPLE_MAP_2)
 
 
 if __name__ == "__main__":

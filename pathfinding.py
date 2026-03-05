@@ -229,8 +229,11 @@ def render_game(grid: Grid, player: Pos, monster: Pos, goal: Pos) -> str:
 def run_monster_game() -> None:
     grid, player, monster, goal = parse_game_map(GAME_MAP)
 
+    mode_input = input("Choose monster mode (BFS/DFS, default BFS): ").strip().upper()
+    mode = mode_input if mode_input in {"BFS", "DFS"} else "BFS"
+
     print("=" * 60)
-    print(f"Monster Chase (MODE={MODE})")
+    print(f"Monster Chase (MODE={mode})")
     print("Use WASD to move, q to quit.")
 
     moves = {
@@ -272,7 +275,7 @@ def run_monster_game() -> None:
             print("You reached the exit. You win!")
             return
 
-        if MODE.upper() == "DFS":
+        if mode == "DFS":
             path, _ = dfs_path(grid, monster, player)
         else:
             path, _ = bfs_path(grid, monster, player)

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import deque
-from dataclasses import dataclass
 from typing import Dict, List, Optional, Set, Tuple
 
 Pos = Tuple[int, int]  # (row, col)
@@ -20,9 +19,9 @@ EXAMPLE_MAP_2 = """
 ############
 #S.....#...#
 ###.##.#.#.#
-#...#..#.#G#
-#.###..#...#
-#......###.#
+#...#..#...#
+#.###..###G#
+#..........#
 ############
 """.strip("\n")
 
